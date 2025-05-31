@@ -1,0 +1,1181 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Blok Sort Puzzle</title>
+<style>
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 20s ease infinite;
+    position: relative;
+    overflow-x: hidden;
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+    margin: 0; 
+    padding: 0;
+    min-height: 100vh;
+    touch-action: manipulation;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 50% 100%, rgba(100, 200, 255, 0.2) 0%, transparent 60%),
+      radial-gradient(circle at 80% 20%, rgba(255, 100, 200, 0.2) 0%, transparent 60%);
+    animation: float 25s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      linear-gradient(90deg, transparent 79%, rgba(255,255,255,0.03) 80%, transparent 81%),
+      linear-gradient(0deg, transparent 79%, rgba(255,255,255,0.03) 80%, transparent 81%);
+    background-size: 50px 50px;
+    animation: sparkle 30s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.8; }
+    25% { transform: translateY(-15px) rotate(2deg); opacity: 1; }
+    50% { transform: translateY(10px) rotate(-1deg); opacity: 0.9; }
+    75% { transform: translateY(-5px) rotate(1deg); opacity: 1; }
+  }
+
+  @keyframes sparkle {
+    0% { transform: translateX(0) translateY(0); }
+    100% { transform: translateX(-50px) translateY(-50px); }
+  }
+
+  h1 {
+    margin: 15px 0 10px;
+    font-weight: 700;
+    font-size: 2.2em;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+
+  #game {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 15px auto 30px;
+    max-width: 95vw;
+    padding: 0 5px;
+  }
+
+  .tube {
+    width: 60px;
+    height: 240px;
+    background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+    border-radius: 30px 30px 15px 15px;
+    box-shadow: 
+      inset 0 5px 10px rgba(255,255,255,0.1),
+      0 8px 16px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 8px 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+    position: relative;
+    overflow: hidden;
+    touch-action: manipulation;
+    margin: 2px;
+    flex-shrink: 0;
+  }
+
+  .tube:hover, .tube:active {
+    transform: translateY(-3px);
+    box-shadow: 
+      inset 0 5px 10px rgba(255,255,255,0.15),
+      0 12px 24px rgba(0,0,0,0.4);
+  }
+
+  .tube.selected {
+    border-color: #00ff88;
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 
+      inset 0 5px 10px rgba(255,255,255,0.2),
+      0 0 20px rgba(0,255,136,0.4);
+  }
+
+  .tube.color-swap-mode {
+    border-color: #ff6b35;
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 
+      inset 0 5px 10px rgba(255,255,255,0.2),
+      0 0 20px rgba(255,107,53,0.6);
+  }
+
+  .block {
+    height: 38px;
+    margin: 2px 0;
+    border-radius: 12px;
+    box-shadow: 
+      0 2px 5px rgba(0,0,0,0.4),
+      inset 0 1px 2px rgba(255,255,255,0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .block.empty {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+  }
+
+  .block.pouring {
+    animation: pour 0.6s ease-in-out;
+  }
+
+  .block.color-swap-selected {
+    border: 2px solid #ff6b35;
+    box-shadow: 
+      0 2px 5px rgba(0,0,0,0.4),
+      inset 0 1px 2px rgba(255,255,255,0.3),
+      0 0 10px rgba(255,107,53,0.6);
+  }
+
+  @keyframes pour {
+    0% { transform: translateY(-20px) scale(1.1); opacity: 0.7; filter: brightness(1.3); }
+    50% { transform: translateY(-10px) scale(1.05); opacity: 0.9; filter: brightness(1.2); }
+    100% { transform: translateY(0) scale(1); opacity: 1; filter: brightness(1); }
+  }
+
+  #controls {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  button {
+    background: linear-gradient(145deg, #4a4a4a, #2a2a2a);
+    border: none;
+    color: #eee;
+    padding: 14px 18px;
+    margin: 0 3px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    font-size: 13px;
+    touch-action: manipulation;
+    min-height: 48px;
+    min-width: 120px;
+  }
+
+  button:hover:enabled, button:active:enabled {
+    background: linear-gradient(145deg, #00ff88, #00cc6a);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,255,136,0.3);
+  }
+
+  button:disabled {
+    background: #222;
+    cursor: not-allowed;
+    color: #555;
+    transform: none;
+    box-shadow: none;
+  }
+
+  #colorSwapBtn {
+    background: linear-gradient(145deg, #ff6b35, #e55a2b);
+    position: relative;
+  }
+
+  #colorSwapBtn:hover:enabled, #colorSwapBtn:active:enabled {
+    background: linear-gradient(145deg, #ff8c69, #ff6b35);
+    box-shadow: 0 6px 12px rgba(255,107,53,0.4);
+  }
+
+  #colorSwapBtn:disabled {
+    background: #333;
+    color: #666;
+  }
+
+  #colorSwapBtn.active {
+    background: linear-gradient(145deg, #ff8c69, #ff6b35);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 6px 12px rgba(255,107,53,0.4); }
+    50% { box-shadow: 0 8px 16px rgba(255,107,53,0.7); }
+    100% { box-shadow: 0 6px 12px rgba(255,107,53,0.4); }
+  }
+
+  #levelDisplay {
+    font-size: 1.2em;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+
+  #scoreDisplay {
+    font-size: 1em;
+    margin-bottom: 10px;
+    color: #00ff88;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+
+  #message {
+    font-size: 1em;
+    font-weight: 600;
+    color: #ffaa00;
+    min-height: 20px;
+    margin-bottom: 10px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    padding: 0 10px;
+    word-wrap: break-word;
+  }
+
+  #successQuote {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-style: italic;
+    font-size: 0.9em;
+    max-width: 85%;
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: none;
+    z-index: 1000;
+  }
+
+  /* Mobile Optimizations */
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 1.8em;
+      margin: 10px 0 8px;
+    }
+
+    #game {
+      gap: 6px;
+      margin: 10px auto 20px;
+      max-width: 98vw;
+      padding: 0 2px;
+    }
+
+    .tube {
+      width: 50px;
+      height: 200px;
+      padding: 6px 4px;
+      border-radius: 25px 25px 12px 12px;
+      margin: 1px;
+    }
+
+    .block {
+      height: 32px;
+      margin: 1px 0;
+      border-radius: 8px;
+    }
+
+    #controls {
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    button {
+      width: 90%;
+      max-width: 280px;
+      padding: 16px 20px;
+      font-size: 14px;
+      min-height: 52px;
+    }
+
+    #levelDisplay {
+      font-size: 1.1em;
+      margin-bottom: 8px;
+    }
+
+    #scoreDisplay {
+      font-size: 0.9em;
+      margin-bottom: 8px;
+    }
+
+    #message {
+      font-size: 0.9em;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    #successQuote {
+      bottom: 80px;
+      max-width: 90%;
+      font-size: 0.8em;
+      padding: 10px 15px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    #game {
+      gap: 4px;
+      max-width: 99vw;
+      padding: 0 1px;
+    }
+
+    .tube {
+      width: 45px;
+      height: 180px;
+      border-radius: 22px 22px 10px 10px;
+      margin: 1px;
+    }
+
+    .block {
+      height: 28px;
+    }
+
+    h1 {
+      font-size: 1.6em;
+    }
+
+    button {
+      font-size: 13px;
+      padding: 14px 16px;
+    }
+  }
+
+  /* Enhanced mobile touch optimization */
+  @media (max-width: 600px) {
+    .tube {
+      padding: 8px 6px;
+    }
+    
+    .block {
+      margin: 2px 0;
+    }
+    
+    body {
+      touch-action: pan-y;
+    }
+  }
+
+  /* Landscape mobile optimization */
+  @media (max-width: 900px) and (orientation: landscape) {
+    h1 {
+      font-size: 1.4em;
+      margin: 5px 0;
+    }
+    
+    #game {
+      margin: 8px auto 15px;
+      gap: 5px;
+    }
+    
+    .tube {
+      height: 160px;
+      width: 48px;
+      margin: 1px;
+    }
+    
+    .block {
+      height: 26px;
+    }
+    
+    #controls {
+      margin-bottom: 10px;
+    }
+    
+    button {
+      padding: 12px 16px;
+      min-height: 44px;
+    }
+  }
+
+  /* Portrait mobile specific */
+  @media (max-width: 600px) and (orientation: portrait) {
+    #game {
+      gap: 4px;
+      padding: 0 1px;
+    }
+    
+    .tube {
+      margin: 1px;
+    }
+  }
+
+  /* Ultra-wide screens optimization */
+  @media (min-width: 1400px) {
+    #game {
+      max-width: 1200px;
+    }
+    
+    .tube {
+      width: 70px;
+      height: 280px;
+    }
+    
+    .block {
+      height: 45px;
+    }
+  }
+
+  /* Touch feedback */
+  @media (hover: none) and (pointer: coarse) {
+    .tube:active {
+      transform: translateY(-2px) scale(0.98);
+    }
+
+    button:active {
+      transform: translateY(-1px) scale(0.98);
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>Blok Sort Puzzle</h1>
+<div id="levelDisplay">Level: 1</div>
+<div id="scoreDisplay">Score: 0</div>
+<div id="message"></div>
+
+<div id="game"></div>
+
+<div id="controls">
+  <button id="undoBtn" disabled>Undo (5 left)</button>
+  <button id="resetBtn">Reset Level</button>
+  <button id="colorSwapBtn">🎨 Color Swap (1 left)</button>
+</div>
+
+<div id="successQuote"></div>
+
+<script>
+(() => {
+  const TUBE_CAPACITY = 5;
+
+  // Sound creation using Web Audio API
+  let audioContext;
+
+  function initAudio() {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  function playPourSound() {
+    try {
+      initAudio();
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+
+      const oscillator1 = audioContext.createOscillator();
+      const oscillator2 = audioContext.createOscillator();
+      const gainNode1 = audioContext.createGain();
+      const gainNode2 = audioContext.createGain();
+      const masterGain = audioContext.createGain();
+
+      oscillator1.connect(gainNode1);
+      oscillator2.connect(gainNode2);
+      gainNode1.connect(masterGain);
+      gainNode2.connect(masterGain);
+      masterGain.connect(audioContext.destination);
+
+      oscillator1.frequency.setValueAtTime(600, audioContext.currentTime);
+      oscillator1.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.4);
+      oscillator1.type = 'sine';
+
+      oscillator2.frequency.setValueAtTime(150, audioContext.currentTime);
+      oscillator2.frequency.setValueAtTime(180, audioContext.currentTime + 0.1);
+      oscillator2.frequency.setValueAtTime(160, audioContext.currentTime + 0.2);
+      oscillator2.frequency.setValueAtTime(200, audioContext.currentTime + 0.3);
+      oscillator2.type = 'triangle';
+
+      gainNode1.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+
+      gainNode2.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+
+      masterGain.gain.setValueAtTime(0.8, audioContext.currentTime);
+
+      oscillator1.start(audioContext.currentTime);
+      oscillator1.stop(audioContext.currentTime + 0.6);
+      oscillator2.start(audioContext.currentTime);
+      oscillator2.stop(audioContext.currentTime + 0.4);
+    } catch (e) {
+      console.log("Audio not available:", e);
+    }
+  }
+
+  function playColorSwapSound() {
+    try {
+      initAudio();
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.2);
+      oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.4);
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {
+      console.log("Audio not available:", e);
+    }
+  }
+
+  function playSuccessSound() {
+    try {
+      initAudio();
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+
+      const frequencies = [523.25, 659.25, 783.99, 1046.50];
+      const oscillators = [];
+      const gainNodes = [];
+
+      frequencies.forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.1);
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime + index * 0.1);
+        gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + index * 0.1 + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.1 + 0.8);
+
+        oscillator.start(audioContext.currentTime + index * 0.1);
+        oscillator.stop(audioContext.currentTime + index * 0.1 + 0.8);
+
+        oscillators.push(oscillator);
+        gainNodes.push(gainNode);
+      });
+
+      setTimeout(() => {
+        const sparkle = audioContext.createOscillator();
+        const sparkleGain = audioContext.createGain();
+
+        sparkle.connect(sparkleGain);
+        sparkleGain.connect(audioContext.destination);
+
+        sparkle.frequency.setValueAtTime(2093, audioContext.currentTime);
+        sparkle.frequency.exponentialRampToValueAtTime(4186, audioContext.currentTime + 0.3);
+        sparkle.type = 'sine';
+
+        sparkleGain.gain.setValueAtTime(0.1, audioContext.currentTime);
+        sparkleGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+        sparkle.start(audioContext.currentTime);
+        sparkle.stop(audioContext.currentTime + 0.3);
+      }, 200);
+
+    } catch (e) {
+      console.log("Audio not available:", e);
+    }
+  }
+
+  // Generate levels with exactly 5 blocks of each color
+  function generateLevel(levelNumber) {
+    const colors = ["red", "blue", "green", "yellow", "orange"];
+    const blocksPerColor = 5;
+    
+    let totalTubes, emptyTubes;
+    if (levelNumber <= 5) {
+      totalTubes = 7;
+      emptyTubes = 2;
+    } else {
+      totalTubes = 6;
+      emptyTubes = 1;
+    }
+    
+    const allBlocks = [];
+    colors.forEach(color => {
+      for (let i = 0; i < blocksPerColor; i++) {
+        allBlocks.push(color);
+      }
+    });
+    
+    // Much easier shuffle for levels 1-10 (15% easier)
+    if (levelNumber <= 10) {
+      // Very minimal shuffle for levels 1-10
+      for (let i = allBlocks.length - 1; i > 0; i--) {
+        let shuffleChance;
+        if (levelNumber <= 3) {
+          shuffleChance = 0.1; // Only 10% chance for levels 1-3
+        } else if (levelNumber <= 6) {
+          shuffleChance = 0.2; // 20% chance for levels 4-6
+        } else {
+          shuffleChance = 0.25; // 25% chance for levels 7-10
+        }
+        
+        if (Math.random() < shuffleChance) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [allBlocks[i], allBlocks[j]] = [allBlocks[j], allBlocks[i]];
+        }
+      }
+    } else {
+      // Normal shuffle for levels 11+
+      for (let i = allBlocks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allBlocks[i], allBlocks[j]] = [allBlocks[j], allBlocks[i]];
+      }
+    }
+    
+    const difficultyFactor = Math.min(levelNumber / 30, 1);
+    
+    // Greatly reduce complexity for levels 1-10
+    if (levelNumber > 10) {
+      const shuffleIntensity = Math.floor(difficultyFactor * 2);
+      for (let shuffle = 0; shuffle < shuffleIntensity; shuffle++) {
+        for (let i = 0; i < allBlocks.length - 1; i += 2) {
+          if (Math.random() < 0.5) {
+            const j = Math.min(i + Math.floor(Math.random() * 6) + 1, allBlocks.length - 1);
+            [allBlocks[i], allBlocks[j]] = [allBlocks[j], allBlocks[i]];
+          }
+        }
+      }
+    }
+    
+    const tubes = [];
+    const blocksPerTube = Math.floor(allBlocks.length / (totalTubes - emptyTubes));
+    let blockIndex = 0;
+    
+    for (let i = 0; i < totalTubes - emptyTubes; i++) {
+      const tube = [];
+      let tubeBlocks = blocksPerTube;
+      
+      if (i === totalTubes - emptyTubes - 1) {
+        tubeBlocks = allBlocks.length - blockIndex;
+      }
+      
+      for (let j = 0; j < tubeBlocks && blockIndex < allBlocks.length; j++) {
+        tube.push(allBlocks[blockIndex]);
+        blockIndex++;
+      }
+      
+      // No tube shuffling for levels 1-10, minimal for levels 11-20
+      if (levelNumber > 20 && tube.length > 2) {
+        const swapCount = Math.floor(difficultyFactor * 1.5);
+        for (let swap = 0; swap < swapCount; swap++) {
+          const pos1 = Math.floor(Math.random() * tube.length);
+          const pos2 = Math.floor(Math.random() * tube.length);
+          [tube[pos1], tube[pos2]] = [tube[pos2], tube[pos1]];
+        }
+      }
+      
+      tubes.push(tube);
+    }
+    
+    // For levels 1-10, try to keep same colors closer together
+    if (levelNumber <= 10) {
+      for (let tubeIdx = 0; tubeIdx < tubes.length - emptyTubes; tubeIdx++) {
+        const tube = tubes[tubeIdx];
+        // Light organization - group similar colors with 70% probability
+        for (let i = 0; i < tube.length - 1; i++) {
+          for (let j = i + 1; j < tube.length; j++) {
+            if (tube[i] === tube[j] && Math.random() < 0.7) {
+              // Swap to bring same colors closer
+              const temp = tube[i + 1];
+              tube[i + 1] = tube[j];
+              tube[j] = temp;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    for (let i = 0; i < emptyTubes; i++) {
+      tubes.push([]);
+    }
+    
+    return tubes;
+  }
+
+  function validateLevel(tubes) {
+    const colorCount = {};
+    const colors = ["red", "blue", "green", "yellow", "orange"];
+    
+    colors.forEach(color => colorCount[color] = 0);
+    
+    tubes.forEach(tube => {
+      tube.forEach(block => {
+        if (colorCount[block] !== undefined) {
+          colorCount[block]++;
+        }
+      });
+    });
+    
+    return colors.every(color => colorCount[color] === 5);
+  }
+
+  const levels = [];
+  for (let i = 0; i < 30; i++) {
+    const originalRandom = Math.random;
+    let seed = i * 12345 + 67890;
+    Math.random = function() {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    
+    let generatedLevel;
+    let attempts = 0;
+    do {
+      generatedLevel = generateLevel(i + 1);
+      attempts++;
+      if (attempts > 100) break;
+    } while (!validateLevel(generatedLevel));
+    
+    levels.push(generatedLevel);
+    Math.random = originalRandom;
+    
+    console.log(`Level ${i + 1} validation:`, validateLevel(generatedLevel));
+  }
+
+  let currentLevel = 0;
+  let tubes = [];
+  let selectedTube = null;
+  let undoStack = [];
+  let undoCount = 5;
+  let score = 0;
+  let colorSwapUsesLeft = 2;
+  let colorSwapMode = false;
+  let colorSwapSelectedTube = null;
+  let colorSwapSelectedBlock = null;
+
+  const successQuotes = [
+    "Intelligence is the ability to adapt to change. - Stephen Hawking",
+    "Success is not final, failure is not fatal: it is the courage to continue that counts. - Winston Churchill",
+    "The only way to do great work is to love what you do. - Steve Jobs",
+    "Innovation distinguishes between a leader and a follower. - Steve Jobs",
+    "Logic will get you from A to Z; imagination will get you everywhere. - Albert Einstein",
+    "The best way to predict the future is to create it. - Peter Drucker",
+    "Success is walking from failure to failure with no loss of enthusiasm. - Winston Churchill",
+    "It is during our darkest moments that we must focus to see the light. - Aristotle",
+    "The mind is everything. What you think you become. - Buddha",
+    "In the middle of difficulty lies opportunity. - Albert Einstein",
+    "Whether you think you can or you think you can't, you're right. - Henry Ford",
+    "The way to get started is to quit talking and begin doing. - Walt Disney",
+    "Believe you can and you're halfway there. - Theodore Roosevelt",
+    "Don't watch the clock; do what it does. Keep going. - Sam Levenson",
+    "A person who never made a mistake never tried anything new. - Albert Einstein",
+    "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
+    "It is impossible for a man to learn what he thinks he already knows. - Epictetus",
+    "Success is not how high you have climbed, but how you make a positive difference. - Roy Bennett",
+    "The only impossible journey is the one you never begin. - Tony Robbins",
+    "Champions keep playing until they get it right. - Billie Jean King",
+    "The expert in anything was once a beginner. - Helen Hayes",
+    "Success is the sum of small efforts repeated day in and day out. - Robert Collier",
+    "The difference between ordinary and extraordinary is that little extra. - Jimmy Johnson",
+    "Excellence is not a skill, it's an attitude. - Ralph Marston",
+    "Great things never came from comfort zones. - Anonymous",
+    "Progress, not perfection. - Anonymous",
+    "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
+    "Winners never quit and quitters never win. - Vince Lombardi",
+    "The way to get things done is not to mind who gets the credit for doing them. - Benjamin Jowett",
+    "You are never too old to set another goal or to dream a new dream. - C.S. Lewis"
+  ];
+
+  function saveGame() {
+    const gameState = {
+      currentLevel,
+      score,
+      undoCount,
+      tubes,
+      undoStack,
+      colorSwapUsesLeft
+    };
+    localStorage.setItem('blokSortPuzzle', JSON.stringify(gameState));
+  }
+
+  function loadGame() {
+    const saved = localStorage.getItem('blokSortPuzzle');
+    if (saved) {
+      try {
+        const gameState = JSON.parse(saved);
+        currentLevel = gameState.currentLevel || 0;
+        score = gameState.score || 0;
+        undoCount = gameState.undoCount || 5;
+        tubes = gameState.tubes || cloneTubes(levels[currentLevel]);
+        undoStack = gameState.undoStack || [];
+        colorSwapUsesLeft = gameState.colorSwapUsesLeft !== undefined ? gameState.colorSwapUsesLeft : 2;
+        return true;
+      } catch (e) {
+        console.log("Failed to load saved game:", e);
+      }
+    }
+    return false;
+  }
+
+  const gameDiv = document.getElementById("game");
+  const levelDisplay = document.getElementById("levelDisplay");
+  const scoreDisplay = document.getElementById("scoreDisplay");
+  const message = document.getElementById("message");
+  const undoBtn = document.getElementById("undoBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const colorSwapBtn = document.getElementById("colorSwapBtn");
+  const successQuoteDiv = document.getElementById("successQuote");
+
+  function cloneTubes(tubes) {
+    return tubes.map(tube => [...tube]);
+  }
+
+  function renderTubes() {
+    gameDiv.innerHTML = "";
+    tubes.forEach((tube, idx) => {
+      const tubeDiv = document.createElement("div");
+      tubeDiv.className = "tube";
+      if (selectedTube === idx) tubeDiv.classList.add("selected");
+      if (colorSwapMode && colorSwapSelectedTube === idx) tubeDiv.classList.add("color-swap-mode");
+
+      for(let i = TUBE_CAPACITY - 1; i >= 0; i--) {
+        const blockDiv = document.createElement("div");
+        blockDiv.className = "block";
+        if(i < tube.length && tube[i]) {
+          blockDiv.style.backgroundColor = tube[i];
+          if (colorSwapMode && colorSwapSelectedTube === idx && i === tube.length - 1) {
+            blockDiv.classList.add("color-swap-selected");
+          }
+        } else {
+          blockDiv.classList.add("empty");
+        }
+        tubeDiv.appendChild(blockDiv);
+      }
+
+      tubeDiv.addEventListener("click", () => tubeClicked(idx));
+      tubeDiv.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        tubeClicked(idx);
+      }, { passive: false });
+      
+      gameDiv.appendChild(tubeDiv);
+    });
+    
+    levelDisplay.textContent = `Level: ${currentLevel + 1}`;
+    scoreDisplay.textContent = `Score: ${score}`;
+    undoBtn.textContent = `Undo (${undoCount} left)`;
+    undoBtn.disabled = undoCount === 0;
+    colorSwapBtn.textContent = `🎨 Color Swap (${colorSwapUsesLeft} left)`;
+    colorSwapBtn.disabled = colorSwapUsesLeft === 0;
+    
+    if (colorSwapMode) {
+      colorSwapBtn.classList.add("active");
+    } else {
+      colorSwapBtn.classList.remove("active");
+    }
+  }
+
+  function tubeClicked(idx) {
+    if (colorSwapMode) {
+      handleColorSwapClick(idx);
+      return;
+    }
+
+    if(selectedTube === null) {
+      if(tubes[idx].length === 0) {
+        message.textContent = "This tube is empty!";
+        return;
+      }
+      selectedTube = idx;
+      message.textContent = "";
+      renderTubes();
+      return;
+    }
+    if(selectedTube === idx) {
+      selectedTube = null;
+      renderTubes();
+      return;
+    }
+    if(canPour(selectedTube, idx)) {
+      undoStack.push(cloneTubes(tubes));
+      if(undoStack.length > 10) undoStack.shift();
+
+      score += 10;
+      message.textContent = "";
+
+      pour(selectedTube, idx);
+      playPourSound();
+
+      selectedTube = null;
+
+      setTimeout(() => {
+        renderTubes();
+        saveGame();
+        checkLevelComplete();
+      }, 100);
+    } else {
+      message.textContent = "Can't pour blocks here!";
+      selectedTube = null;
+      renderTubes();
+    }
+  }
+
+  function handleColorSwapClick(idx) {
+    if (tubes[idx].length === 0) {
+      message.textContent = "This tube is empty! Choose a tube with blocks.";
+      return;
+    }
+
+    if (colorSwapSelectedTube === null) {
+      colorSwapSelectedTube = idx;
+      colorSwapSelectedBlock = tubes[idx][tubes[idx].length - 1];
+      message.textContent = `Selected ${colorSwapSelectedBlock} block. Now choose destination tube.`;
+      renderTubes();
+    } else if (colorSwapSelectedTube === idx) {
+      colorSwapSelectedTube = null;
+      colorSwapSelectedBlock = null;
+      message.textContent = "Color swap cancelled. Choose a tube to start.";
+      renderTubes();
+    } else {
+      if (tubes[idx].length >= TUBE_CAPACITY) {
+        message.textContent = "Destination tube is full!";
+        return;
+      }
+
+      undoStack.push(cloneTubes(tubes));
+      if(undoStack.length > 10) undoStack.shift();
+
+      const blockToMove = tubes[colorSwapSelectedTube].pop();
+      tubes[idx].push(blockToMove);
+
+      score += 20;
+      colorSwapUsesLeft--;
+      colorSwapMode = false;
+      colorSwapSelectedTube = null;
+      colorSwapSelectedBlock = null;
+
+      playColorSwapSound();
+      message.textContent = "Color swap successful! ✨";
+
+      setTimeout(() => {
+        renderTubes();
+        saveGame();
+        checkLevelComplete();
+      }, 100);
+    }
+  }
+
+  function canPour(fromIdx, toIdx) {
+    if(fromIdx === toIdx) return false;
+    const fromTube = tubes[fromIdx];
+    const toTube = tubes[toIdx];
+    if(fromTube.length === 0) return false;
+    if(toTube.length === TUBE_CAPACITY) return false;
+
+    const blockToMove = fromTube[fromTube.length - 1];
+    if(toTube.length === 0) return true;
+
+    const topBlockTo = toTube[toTube.length - 1];
+    if(topBlockTo !== blockToMove) return false;
+
+    let spaceAvailable = TUBE_CAPACITY - toTube.length;
+    return spaceAvailable > 0;
+  }
+
+  function pour(fromIdx, toIdx) {
+    const fromTube = tubes[fromIdx];
+    const toTube = tubes[toIdx];
+
+    const blockToMove = fromTube[fromTube.length - 1];
+    let count = 1;
+
+    for(let i = fromTube.length - 2; i >= 0; i--) {
+      if(fromTube[i] === blockToMove) count++;
+      else break;
+    }
+
+    let space = TUBE_CAPACITY - toTube.length;
+    let toPour = Math.min(count, space);
+
+    for(let i = 0; i < toPour; i++) {
+      toTube.push(fromTube.pop());
+    }
+  }
+
+  function showSuccessQuote(level) {
+    const quote = successQuotes[level] || successQuotes[successQuotes.length - 1];
+    successQuoteDiv.textContent = `"${quote}"`;
+    successQuoteDiv.style.display = 'block';
+  }
+
+  function hideSuccessQuote() {
+    successQuoteDiv.style.display = 'none';
+  }
+
+  function checkLevelComplete() {
+    let complete = true;
+    for(let tube of tubes) {
+      if(tube.length === 0) continue;
+      if(tube.length !== TUBE_CAPACITY) {
+        complete = false;
+        break;
+      }
+      let color = tube[0];
+      if(!tube.every(c => c === color)) {
+        complete = false;
+        break;
+      }
+    }
+    if(complete) {
+      playSuccessSound();
+      message.textContent = "Level Completed! Loading next level...";
+      setTimeout(() => {
+        currentLevel++;
+        if(currentLevel >= levels.length) {
+          message.textContent = "🎉 INCREDIBLE! 🎉 You completed all 30 levels! You are the ultimate puzzle LEGEND!";
+          hideSuccessQuote();
+          successQuoteDiv.textContent = '"The expert in anything was once a beginner. You are now the master! - Congratulations"';
+          successQuoteDiv.style.display = 'block';
+          selectedTube = null;
+
+          gameDiv.style.pointerEvents = 'none';
+          undoBtn.disabled = true;
+          resetBtn.disabled = true;
+          colorSwapBtn.disabled = true;
+
+          localStorage.removeItem('blokSortPuzzle');
+
+          renderTubes();
+          return;
+        }
+        tubes = cloneTubes(levels[currentLevel]);
+        undoStack = [];
+        undoCount = 5;
+        score += 50;
+        selectedTube = null;
+        colorSwapUsesLeft = 2;
+        colorSwapMode = false;
+        colorSwapSelectedTube = null;
+        colorSwapSelectedBlock = null;
+        message.textContent = "";
+        hideSuccessQuote();
+        showSuccessQuote(currentLevel);
+        renderTubes();
+        saveGame();
+      }, 1500);
+    }
+  }
+
+  undoBtn.addEventListener("click", () => {
+    if(undoStack.length === 0 || undoCount === 0) return;
+    tubes = undoStack.pop();
+    undoCount--;
+    message.textContent = "Undo performed.";
+    selectedTube = null;
+    if (colorSwapMode) {
+      colorSwapMode = false;
+      colorSwapSelectedTube = null;
+      colorSwapSelectedBlock = null;
+    }
+    renderTubes();
+    saveGame();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    tubes = cloneTubes(levels[currentLevel]);
+    undoStack = [];
+    undoCount = 5;
+    message.textContent = "";
+    selectedTube = null;
+    colorSwapUsesLeft = 2;
+    colorSwapMode = false;
+    colorSwapSelectedTube = null;
+    colorSwapSelectedBlock = null;
+    renderTubes();
+    saveGame();
+  });
+
+  colorSwapBtn.addEventListener("click", () => {
+    if (colorSwapUsesLeft === 0) return;
+    
+    colorSwapMode = !colorSwapMode;
+    selectedTube = null;
+    
+    if (colorSwapMode) {
+      message.textContent = "🎨 Color Swap Mode: Select a tube with the block you want to move.";
+      colorSwapSelectedTube = null;
+      colorSwapSelectedBlock = null;
+    } else {
+      message.textContent = "Color swap mode cancelled.";
+      colorSwapSelectedTube = null;
+      colorSwapSelectedBlock = null;
+    }
+    
+    renderTubes();
+  });
+
+  document.addEventListener('click', initAudio, { once: true });
+  document.addEventListener('touchstart', initAudio, { once: true });
+
+  if (!loadGame()) {
+    tubes = cloneTubes(levels[0]);
+    colorSwapUsesLeft = 2;
+  }
+  showSuccessQuote(currentLevel);
+  renderTubes();
+})();
+</script>
+
+</body>
+</html>
